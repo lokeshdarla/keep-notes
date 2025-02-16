@@ -24,6 +24,7 @@ class _NoteScreenState extends State<NoteScreen> {
     }
   }
 
+  /// Saves a new note or updates an existing one
   Future<void> saveNote() async {
     if (titleController.text.isEmpty || textController.text.isEmpty) return;
 
@@ -31,21 +32,51 @@ class _NoteScreenState extends State<NoteScreen> {
       await NoteDatabase.addNote(titleController.text, textController.text);
     } else {
       await NoteDatabase.updateNote(
-        widget.note!,
+        widget.note!.key, // ✅ Passes the correct key instead of typecasting
         titleController.text,
         textController.text,
       );
     }
 
-    Navigator.pop(context, true); // Return to home screen
+    Navigator.pop(context, true); // ✅ Returns success flag
+  }
+
+  /// Custom input field for title & content
+  Widget buildTextField({
+    required String label,
+    required TextEditingController controller,
+    bool isMultiline = false,
+  }) {
+    return TextField(
+      controller: controller,
+      maxLines: isMultiline ? null : 1,
+      expands: isMultiline,
+      keyboardType: isMultiline ? TextInputType.multiline : TextInputType.text,
+      textAlignVertical: TextAlignVertical.top,
+      style: const TextStyle(fontSize: 16, color: Colors.black),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(color: Colors.grey[700]),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: Colors.grey.shade400),
+        ),
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: const EdgeInsets.all(12), // ✅ Added better padding
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100], // Light background
+      backgroundColor: Colors.grey[100],
       appBar: AppBar(
-        title: const Text('Edit Note', style: TextStyle(color: Colors.black)),
+        title: Text(
+          widget.note == null ? 'New Note' : 'Edit Note',
+          style: const TextStyle(color: Colors.black),
+        ),
         backgroundColor: Colors.white,
         elevation: 1,
         iconTheme: const IconThemeData(color: Colors.black),
@@ -54,48 +85,15 @@ class _NoteScreenState extends State<NoteScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            TextField(
-              controller: titleController,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black, // Title text color fixed
-              ),
-              decoration: InputDecoration(
-                labelText: 'Title',
-                labelStyle: TextStyle(color: Colors.grey[700]),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: Colors.grey.shade400),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-              ),
-            ),
+            buildTextField(label: 'Title', controller: titleController),
             const SizedBox(height: 12),
             Expanded(
-              child: TextField(
+              child: buildTextField(
+                label: 'Content',
                 controller: textController,
-                maxLines: null,
-                expands: true,
-                keyboardType: TextInputType.multiline,
-                textAlignVertical:
-                    TextAlignVertical.top, // Ensures content starts from top
-                style: const TextStyle(fontSize: 16, color: Colors.black),
-                decoration: InputDecoration(
-                  labelText: 'Content',
-                  alignLabelWithHint: true, // Aligns label properly
-                  labelStyle: TextStyle(color: Colors.grey[700]),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: BorderSide(color: Colors.grey.shade400),
-                  ),
-                  filled: true,
-                  fillColor: Colors.white,
-                ),
+                isMultiline: true,
               ),
             ),
-
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,

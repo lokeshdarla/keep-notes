@@ -1,17 +1,21 @@
-import 'package:isar/isar.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'note.dart';
 
 class NoteDatabase {
-  static late Isar isar;
+  static late Box<Note> _noteBox;
 
-  static Future<void> initialise() async {
-    final dir = await getApplicationDocumentsDirectory();
-    isar = await Isar.open([NoteSchema], directory: dir.path);
+  /// Initializes Hive and opens the box
+  static Future<void> initialize() async {
+    if (!Hive.isAdapterRegistered(0)) {
+      // Ensure adapter is registered
+      Hive.registerAdapter(NoteAdapter());
+    }
+    _noteBox = await Hive.openBox<Note>('notes');
   }
 
-  // Add a new note
-  static Future<void> addNote(String title, String text) async {
+  /// Adds a new note
+  static Future<int> addNote(String title, String text) async {
     final note =
         Note()
           ..title = title
@@ -19,54 +23,60 @@ class NoteDatabase {
           ..createdAt = DateTime.now()
           ..lastModified = DateTime.now();
 
-    await isar.writeTxn(() async => await isar.notes.put(note));
+    return await _noteBox.add(note);
   }
 
-  // Get all notes sorted by last modified (default)
-  static Future<List<Note>> getNotes() async {
-    return await isar.notes.where().sortByLastModifiedDesc().findAll();
+  /// Gets all notes sorted by last modified (default)
+  static List<Note> getNotes() {
+    return _noteBox.values.toList()
+      ..sort((a, b) => b.lastModified.compareTo(a.lastModified));
   }
 
-  // Sort notes by name (A-Z)
-  static Future<List<Note>> getNotesSortedByName() async {
-    return await isar.notes.where().sortByTitle().findAll();
+  /// Sort notes by name (A-Z)
+  static List<Note> getNotesSortedByName() {
+    return _noteBox.values.toList()..sort((a, b) => a.title.compareTo(b.title));
   }
 
-  // Sort notes by last modified (Newest first)
-  static Future<List<Note>> getNotesSortedByLastModified() async {
-    return await isar.notes.where().sortByLastModifiedDesc().findAll();
+  /// Sort notes by last modified (Newest first)
+  static List<Note> getNotesSortedByLastModified() {
+    return _noteBox.values.toList()
+      ..sort((a, b) => b.lastModified.compareTo(a.lastModified));
   }
 
-  // Sort notes by created date (Oldest first)
-  static Future<List<Note>> getNotesSortedByCreatedDate() async {
-    return await isar.notes.where().sortByCreatedAt().findAll();
+  /// Sort notes by created date (Oldest first)
+  static List<Note> getNotesSortedByCreatedDate() {
+    return _noteBox.values.toList()
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
   }
 
-  // Update a note
+  /// Updates an existing note
   static Future<void> updateNote(
-    Note note,
+    int key,
     String newTitle,
     String newText,
   ) async {
-    note.title = newTitle;
-    note.text = newText;
-    note.lastModified = DateTime.now();
-
-    await isar.writeTxn(() async => await isar.notes.put(note));
+    final note = _noteBox.get(key);
+    if (note != null) {
+      note.title = newTitle;
+      note.text = newText;
+      note.lastModified = DateTime.now();
+      await _noteBox.put(key, note); // Save update using key
+    }
   }
 
-  // Delete a note
-  static Future<void> deleteNote(int id) async {
-    await isar.writeTxn(() async => await isar.notes.delete(id));
+  /// Deletes a note
+  static Future<void> deleteNote(int key) async {
+    await _noteBox.delete(key);
   }
 
-  // Search for notes containing a keyword (case-insensitive)
-  static Future<List<Note>> searchNotes(String query) async {
-    return await isar.notes
-        .filter()
-        .titleContains(query, caseSensitive: false)
-        .or()
-        .textContains(query, caseSensitive: false)
-        .findAll();
+  /// Searches for notes containing a keyword (case-insensitive)
+  static List<Note> searchNotes(String query) {
+    return _noteBox.values
+        .where(
+          (note) =>
+              note.title.toLowerCase().contains(query.toLowerCase()) ||
+              note.text.toLowerCase().contains(query.toLowerCase()),
+        )
+        .toList();
   }
 }

@@ -1,17 +1,18 @@
-import 'package:isar/isar.dart';
+import 'package:hive/hive.dart';
 
-part 'note.g.dart'; // Ensure this file is generated
+part 'note.g.dart';
 
-@collection
-class Note {
-  Id id = Isar.autoIncrement; // Auto-increment ID
-
+@HiveType(typeId: 0)
+class Note extends HiveObject {
+  @HiveField(0)
   late String title;
+
+  @HiveField(1)
   late String text;
 
-  @Index()
-  late DateTime createdAt; // Creation timestamp
+  @HiveField(2)
+  late DateTime createdAt;
 
-  @Index()
-  late DateTime lastModified; // Last modified timestamp
+  @HiveField(3)
+  late DateTime lastModified;
 }

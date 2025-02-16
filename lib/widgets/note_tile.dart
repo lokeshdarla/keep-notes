@@ -18,15 +18,46 @@ class NoteTile extends StatelessWidget {
     return timeago.format(dateTime, locale: 'en_short'); // e.g., "5m ago"
   }
 
+  /// Builds the delete confirmation dialog
+  Future<void> showDeleteDialog(BuildContext context) async {
+    return showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text("Delete Note"),
+            content: const Text("Are you sure you want to delete this note?"),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text("Cancel"),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  onDelete(note.key); // ✅ Now correctly deletes the note
+                },
+                child: const Text(
+                  "Delete",
+                  style: TextStyle(color: Colors.red),
+                ),
+              ),
+            ],
+          ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
       color: Colors.white,
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 0, // Removes shadow
+      elevation: 1, // ✅ Added slight elevation for depth
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 12,
+          horizontal: 16,
+        ),
         title: Text(
           note.title,
           style: const TextStyle(
@@ -38,7 +69,7 @@ class NoteTile extends StatelessWidget {
           overflow: TextOverflow.ellipsis,
         ),
         subtitle: Padding(
-          padding: const EdgeInsets.only(top: 4),
+          padding: const EdgeInsets.only(top: 6),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -63,40 +94,18 @@ class NoteTile extends StatelessWidget {
         ),
         trailing: IconButton(
           icon: const Icon(Icons.delete, color: Colors.red),
-          onPressed: () {
-            showDialog(
-              context: context,
-              builder:
-                  (context) => AlertDialog(
-                    title: const Text("Delete Note"),
-                    content: const Text(
-                      "Are you sure you want to delete this note?",
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text("Cancel"),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          onDelete(note.id);
-                        },
-                        child: const Text(
-                          "Delete",
-                          style: TextStyle(color: Colors.red),
-                        ),
-                      ),
-                    ],
-                  ),
-            );
-          },
+          onPressed: () => showDeleteDialog(context),
         ),
-        onTap:
-            () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => NoteScreen(note: note)),
-            ).then((_) => onDelete(0)), // Refresh list
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => NoteScreen(note: note)),
+          ).then((result) {
+            if (result == true) {
+              onDelete(0); // ✅ Only refreshes when necessary
+            }
+          });
+        },
       ),
     );
   }
